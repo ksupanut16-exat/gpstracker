@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -6,17 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GPS Tracker</title>
 
-    <!-- โหลด Leaflet -->
+    <!-- โหลด Leaflet (ลบ integrity และ crossorigin ออก) -->
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-sA+4b8Kz0D0WfTgkUJbJQ7FQ0vFv7pnhM7Nf1pA+Z1w="
-        crossorigin=""
     />
     <script
         src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-o9N1j7kGStG2zYw2x+hG3WZBeb5lL1zGPEz3T2oCjHc="
-        crossorigin=""
     ></script>
 
     <style>
@@ -80,12 +75,3 @@
                     },
                     { enableHighAccuracy: true }
                 );
-            } else {
-                alert("เบราว์เซอร์ไม่รองรับการระบุตำแหน่ง");
-            }
-        }
-
-        document.getElementById('locateBtn').addEventListener('click', locateUser);
-    </script>
-</body>
-</html>
