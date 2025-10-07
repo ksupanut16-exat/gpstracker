@@ -44,12 +44,18 @@
     <div id="map"></div>
 
     <script>
+    window.onload = () => {
+        // สร้างแผนที่หลังจากหน้าโหลดครบ
         const map = L.map('map').setView([13.736717, 100.523186], 13); // กรุงเทพ
 
+        // เพิ่มแผนที่จาก OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
         }).addTo(map);
+
+        // ให้แผนที่คำนวณขนาดใหม่ เผื่อ container ยังไม่พร้อม
+        setTimeout(() => { map.invalidateSize(); }, 500);
 
         let marker, circle;
 
@@ -75,3 +81,11 @@
                     },
                     { enableHighAccuracy: true }
                 );
+            } else {
+                alert("เบราว์เซอร์ไม่รองรับการระบุตำแหน่ง");
+            }
+        }
+
+        document.getElementById('locateBtn').addEventListener('click', locateUser);
+    };
+</script>
