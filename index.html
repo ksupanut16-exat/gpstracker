@@ -6,10 +6,7 @@
   <title>GPS Tracker</title>
 
   <!-- โหลด Leaflet CSS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet/dist/leaflet.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
   <style>
     html, body {
@@ -46,12 +43,24 @@
     .leaflet-control-zoom {
       margin-top: 2cm !important;
     }
+
+    .update-status {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.8);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      z-index: 1000;
+    }
   </style>
 </head>
 
 <body>
   <button id="locateBtn">📍 หาตำแหน่งปัจจุบัน</button>
   <div id="map"></div>
+  <div id="status" class="update-status">🕓 กำลังรออัปเดตตำแหน่ง...</div>
 
   <!-- โหลด Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -59,7 +68,7 @@
   <script>
     window.onload = () => {
       // สร้างแผนที่เริ่มต้น
-      const map = L.map('map').setView([13.736717, 100.523186], 13); // กรุงเทพ
+      const map = L.map('map').setView([13.736717, 100.523186], 13);
 
       // เพิ่มแผนที่จาก OpenStreetMap
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -68,14 +77,14 @@
           '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
       }).addTo(map);
 
-      // ให้แน่ใจว่าแผนที่ขยายเต็มจอ
       setTimeout(() => {
         map.invalidateSize();
       }, 500);
 
       let marker, circle;
+      const statusEl = document.getElementById("status");
 
-      function locateUser() {
+      function updateLocation() {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (pos) => {
@@ -83,13 +92,13 @@
               const lng = pos.coords.longitude;
               const accuracy = pos.coords.accuracy;
 
-              // ลบ marker เดิม (ถ้ามี)
+              // ลบ marker เดิม
               if (marker) {
                 map.removeLayer(marker);
                 map.removeLayer(circle);
               }
 
-              // เพิ่ม marker และวงกลมรัศมีความแม่นยำ
+              // สร้าง marker + วงกลมรัศมีใหม่
               marker = L.marker([lat, lng]).addTo(map);
               circle = L.circle([lat, lng], {
                 radius: accuracy,
@@ -98,10 +107,19 @@
                 fillOpacity: 0.3
               }).addTo(map);
 
+              // จัดมุมมองให้เห็นตำแหน่งใหม่
               map.setView([lat, lng], 16);
+
+              // บันทึกตำแหน่งล่าสุด
+              localStorage.setItem("lastLat", lat);
+              localStorage.setItem("lastLng", lng);
+              localStorage.setItem("lastTime", new Date().toLocaleTimeString());
+
+              // แสดงเวลาอัปเดต
+              statusEl.innerHTML = `✅ อัปเดตตำแหน่งล่าสุดเมื่อ ${new Date().toLocaleTimeString()}`;
             },
             (err) => {
-              alert("❌ ไม่สามารถระบุตำแหน่งได้: " + err.message);
+              statusEl.innerHTML = "❌ ไม่สามารถระบุตำแหน่งได้: " + err.message;
             },
             { enableHighAccuracy: true }
           );
@@ -110,7 +128,11 @@
         }
       }
 
-      document.getElementById('locateBtn').addEventListener('click', locateUser);
+      // เริ่มค้นหาตำแหน่งเมื่อคลิกปุ่ม
+      document.getElementById('locateBtn').addEventListener('click', updateLocation);
+
+      // ✅ อัปเดตตำแหน่งอัตโนมัติทุก 1 นาที
+      setInterval(updateLocation, 60000);
     };
   </script>
 </body>
