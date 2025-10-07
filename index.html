@@ -1,91 +1,117 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPS Tracker</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPS Tracker</title>
 
-    <!-- โหลด Leaflet (ลบ integrity และ crossorigin ออก) -->
-    <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
-    <script
-        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    ></script>
+  <!-- โหลด Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet/dist/leaflet.css"
+  />
 
-    <style>
-        html, body { margin: 0; height: 100%; }
-        #map { width: 100%; height: 100vh; }
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
 
-        /* ปุ่มหาตำแหน่ง */
-        #locateBtn {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 1000;
-            padding: 8px 12px;
-            background: #0078ff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        #locateBtn:hover { background: #005ec2; }
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
 
-        /* ย้ายแถบซูมลงมาข้างล่าง 2cm */
-        .leaflet-control-zoom {
-            margin-top: 2cm !important;
-        }
-    </style>
+    #locateBtn {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    #locateBtn:hover {
+      background: #0056b3;
+    }
+
+    /* ปรับปุ่ม zoom control ลงล่าง 2cm */
+    .leaflet-control-zoom {
+      margin-top: 2cm !important;
+    }
+  </style>
 </head>
+
 <body>
-    <button id="locateBtn">📍 หาตำแหน่งปัจจุบัน</button>
-    <div id="map"></div>
+  <button id="locateBtn">📍 หาตำแหน่งปัจจุบัน</button>
+  <div id="map"></div>
 
-    <script>
+  <!-- โหลด Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <script>
     window.onload = () => {
-        // สร้างแผนที่หลังจากหน้าโหลดครบ
-        const map = L.map('map').setView([13.736717, 100.523186], 13); // กรุงเทพ
+      // สร้างแผนที่เริ่มต้น
+      const map = L.map('map').setView([13.736717, 100.523186], 13); // กรุงเทพ
 
-        // เพิ่มแผนที่จาก OpenStreetMap
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
-        }).addTo(map);
+      // เพิ่มแผนที่จาก OpenStreetMap
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+      }).addTo(map);
 
-        // ให้แผนที่คำนวณขนาดใหม่ เผื่อ container ยังไม่พร้อม
-        setTimeout(() => { map.invalidateSize(); }, 500);
+      // ให้แน่ใจว่าแผนที่ขยายเต็มจอ
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 500);
 
-        let marker, circle;
+      let marker, circle;
 
-        function locateUser() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    pos => {
-                        const lat = pos.coords.latitude;
-                        const lng = pos.coords.longitude;
-                        const accuracy = pos.coords.accuracy;
+      function locateUser() {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              const accuracy = pos.coords.accuracy;
 
-                        if (marker) {
-                            map.removeLayer(marker);
-                            map.removeLayer(circle);
-                        }
+              // ลบ marker เดิม (ถ้ามี)
+              if (marker) {
+                map.removeLayer(marker);
+                map.removeLayer(circle);
+              }
 
-                        marker = L.marker([lat, lng]).addTo(map);
-                        circle = L.circle([lat, lng], { radius: accuracy }).addTo(map);
-                        map.setView([lat, lng], 16);
-                    },
-                    err => {
-                        alert("❌ ไม่สามารถระบุตำแหน่งได้: " + err.message);
-                    },
-                    { enableHighAccuracy: true }
-                );
-            } else {
-                alert("เบราว์เซอร์ไม่รองรับการระบุตำแหน่ง");
-            }
+              // เพิ่ม marker และวงกลมรัศมีความแม่นยำ
+              marker = L.marker([lat, lng]).addTo(map);
+              circle = L.circle([lat, lng], {
+                radius: accuracy,
+                color: "#136aec",
+                fillColor: "#136aec",
+                fillOpacity: 0.3
+              }).addTo(map);
+
+              map.setView([lat, lng], 16);
+            },
+            (err) => {
+              alert("❌ ไม่สามารถระบุตำแหน่งได้: " + err.message);
+            },
+            { enableHighAccuracy: true }
+          );
+        } else {
+          alert("เบราว์เซอร์ไม่รองรับการระบุตำแหน่ง");
         }
+      }
 
-        document.getElementById('locateBtn').addEventListener('click', locateUser);
+      document.getElementById('locateBtn').addEventListener('click', locateUser);
     };
-</script>
+  </script>
+</body>
+</html>
