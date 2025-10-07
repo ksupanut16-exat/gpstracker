@@ -1,67 +1,91 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Location Tracker</title>
+    <title>GPS Tracker</title>
 
-    <!-- โหลด Leaflet CSS -->
+    <!-- โหลด Leaflet -->
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-sA+4b8Kz0D0WfTgkUJbJQ7FQ0vFv7pnhM7Nf1pA+Z1w="
         crossorigin=""
     />
-
-    <style>
-        body, html {
-            height: 100%;
-            margin: 0;
-        }
-        #map {
-            height: 100vh;
-            width: 100%;
-        }
-    </style>
-</head>
-<body>
-
-    <div id="map"></div>
-
-    <!-- โหลด Leaflet JS -->
     <script
         src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-o9N1j7kGStG2zYw2x+hG3WZBeb5lL1zGPEz3T2oCjHc="
         crossorigin=""
     ></script>
 
+    <style>
+        html, body { margin: 0; height: 100%; }
+        #map { width: 100%; height: 100vh; }
+
+        /* ปุ่มหาตำแหน่ง */
+        #locateBtn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            padding: 8px 12px;
+            background: #0078ff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        #locateBtn:hover { background: #005ec2; }
+
+        /* ย้ายแถบซูมลงมาข้างล่าง 2cm */
+        .leaflet-control-zoom {
+            margin-top: 2cm !important;
+        }
+    </style>
+</head>
+<body>
+    <button id="locateBtn">📍 หาตำแหน่งปัจจุบัน</button>
+    <div id="map"></div>
+
     <script>
-        // เริ่มต้นแผนที่ที่จุดเริ่มต้น
         const map = L.map('map').setView([13.736717, 100.523186], 13); // กรุงเทพ
 
-        // เพิ่มแผนที่จาก OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+            attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-        // ตรวจสอบและแสดงตำแหน่งผู้ใช้
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const { latitude, longitude, accuracy } = pos.coords;
-                    const userMarker = L.marker([latitude, longitude]).addTo(map);
-                    const accuracyCircle = L.circle([latitude, longitude], { radius: accuracy }).addTo(map);
-                    map.setView([latitude, longitude], 16);
-                },
-                (err) => {
-                    alert("ไม่สามารถเข้าถึงตำแหน่งได้: " + err.message);
-                },
-                { enableHighAccuracy: true }
-            );
-        } else {
-            alert("เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง");
+        let marker, circle;
+
+        function locateUser() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+                        const accuracy = pos.coords.accuracy;
+
+                        if (marker) {
+                            map.removeLayer(marker);
+                            map.removeLayer(circle);
+                        }
+
+                        marker = L.marker([lat, lng]).addTo(map);
+                        circle = L.circle([lat, lng], { radius: accuracy }).addTo(map);
+                        map.setView([lat, lng], 16);
+                    },
+                    err => {
+                        alert("❌ ไม่สามารถระบุตำแหน่งได้: " + err.message);
+                    },
+                    { enableHighAccuracy: true }
+                );
+            } else {
+                alert("เบราว์เซอร์ไม่รองรับการระบุตำแหน่ง");
+            }
         }
+
+        document.getElementById('locateBtn').addEventListener('click', locateUser);
     </script>
 </body>
 </html>
