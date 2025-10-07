@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GPS Tracker</title>
+  <title>GPS Tracker + GPX Export</title>
 
-  <!-- โหลด Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
   <style>
@@ -46,27 +45,17 @@
       background: #0056b3;
     }
 
-    #saveBtn {
-      background: #28a745;
-    }
-    #saveBtn:hover {
-      background: #1e7e34;
-    }
+    #saveBtn { background: #28a745; }
+    #saveBtn:hover { background: #1e7e34; }
 
-    #clearBtn {
-      background: #dc3545;
-    }
-    #clearBtn:hover {
-      background: #a71d2a;
-    }
+    #clearBtn { background: #dc3545; }
+    #clearBtn:hover { background: #a71d2a; }
 
-    #importBtn {
-      background: #ffc107;
-      color: black;
-    }
-    #importBtn:hover {
-      background: #e0a800;
-    }
+    #importBtn { background: #ffc107; color: black; }
+    #importBtn:hover { background: #e0a800; }
+
+    #gpxBtn { background: #17a2b8; }
+    #gpxBtn:hover { background: #117a8b; }
 
     .leaflet-control-zoom {
       margin-top: 2cm !important;
@@ -88,7 +77,8 @@
 <body>
   <div class="control-panel">
     <button id="locateBtn">📍 หาตำแหน่งปัจจุบัน</button>
-    <button id="saveBtn">💾 บันทึกเส้นทาง</button>
+    <button id="saveBtn">💾 บันทึกเส้นทาง (JSON)</button>
+    <button id="gpxBtn">⬇️ บันทึกเป็น GPX</button>
     <button id="importBtn">📂 นำเข้าเส้นทาง</button>
     <button id="clearBtn">🧹 ล้างเส้นทาง</button>
     <input type="file" id="fileInput" accept=".json" style="display: none;">
@@ -97,7 +87,6 @@
   <div id="map"></div>
   <div id="status" class="update-status">🕓 กำลังรออัปเดตตำแหน่ง...</div>
 
-  <!-- โหลด Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <script>
@@ -125,13 +114,11 @@
               const lng = pos.coords.longitude;
               const accuracy = pos.coords.accuracy;
 
-              // ลบ marker/circle เดิม
               if (marker) {
                 map.removeLayer(marker);
                 map.removeLayer(circle);
               }
 
-              // เพิ่ม marker และวงกลมรัศมีใหม่
               marker = L.marker([lat, lng]).addTo(map);
               circle = L.circle([lat, lng], {
                 radius: accuracy,
@@ -140,10 +127,8 @@
                 fillOpacity: 0.3
               }).addTo(map);
 
-              // เพิ่มตำแหน่งใหม่ใน path
               path.push([lat, lng]);
 
-              // ลบเส้นเก่าแล้ววาดใหม่
               if (polyline) map.removeLayer(polyline);
               polyline = L.polyline(path, {
                 color: "blue",
@@ -153,7 +138,6 @@
 
               map.setView([lat, lng], 16);
 
-              // เก็บ path ไว้ใน localStorage
               localStorage.setItem("path", JSON.stringify(path));
               localStorage.setItem("lastUpdate", new Date().toLocaleTimeString());
               statusEl.innerHTML = `✅ อัปเดตตำแหน่งล่าสุดเมื่อ ${new Date().toLocaleTimeString()}`;
@@ -176,10 +160,9 @@
         map.fitBounds(polyline.getBounds());
       }
 
-      // 📍 ปุ่มหาตำแหน่ง
       document.getElementById('locateBtn').addEventListener('click', updateLocation);
 
-      // 💾 ปุ่มบันทึกเส้นทาง
+      // 💾 บันทึก JSON
       document.getElementById('saveBtn').addEventListener('click', () => {
         if (path.length === 0) {
           alert("ยังไม่มีเส้นทางให้บันทึก!");
@@ -195,28 +178,21 @@
         URL.revokeObjectURL(url);
       });
 
-      // 📂 ปุ่มนำเข้าเส้นทาง
+      // 📂 นำเข้าเส้นทาง
       const fileInput = document.getElementById("fileInput");
       document.getElementById('importBtn').addEventListener('click', () => fileInput.click());
-
       fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = (event) => {
           try {
             const importedPath = JSON.parse(event.target.result);
             if (!Array.isArray(importedPath)) throw new Error("ไฟล์ไม่ถูกต้อง");
-
-            // ล้างเส้นเดิม
             if (polyline) map.removeLayer(polyline);
-
-            // แสดงเส้นใหม่จากไฟล์
             path = importedPath;
             polyline = L.polyline(path, { color: "green", weight: 4 }).addTo(map);
             map.fitBounds(polyline.getBounds());
-
             localStorage.setItem("path", JSON.stringify(path));
             statusEl.innerHTML = "📂 โหลดเส้นทางจากไฟล์สำเร็จ";
           } catch {
@@ -226,7 +202,7 @@
         reader.readAsText(file);
       });
 
-      // 🧹 ปุ่มล้างเส้นทาง
+      // 🧹 ล้างเส้นทาง
       document.getElementById('clearBtn').addEventListener('click', () => {
         if (confirm("แน่ใจหรือไม่ว่าต้องการล้างเส้นทางทั้งหมด?")) {
           path = [];
@@ -236,7 +212,33 @@
         }
       });
 
-      // 🔁 อัปเดตตำแหน่งอัตโนมัติทุก 1 นาที
+      // ⬇️ บันทึกเป็น GPX
+      document.getElementById('gpxBtn').addEventListener('click', () => {
+        if (path.length === 0) {
+          alert("ยังไม่มีเส้นทางให้บันทึกเป็น GPX!");
+          return;
+        }
+
+        let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+        gpx += `<gpx version="1.1" creator="GPS Tracker" xmlns="http://www.topografix.com/GPX/1/1">\n`;
+        gpx += `  <trk>\n    <name>GPS Route</name>\n    <trkseg>\n`;
+
+        path.forEach(([lat, lng]) => {
+          gpx += `      <trkpt lat="${lat}" lon="${lng}"></trkpt>\n`;
+        });
+
+        gpx += `    </trkseg>\n  </trk>\n</gpx>`;
+
+        const blob = new Blob([gpx], { type: "application/gpx+xml" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `route_${new Date().toISOString().split("T")[0]}.gpx`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      // 🔁 อัปเดตอัตโนมัติทุก 1 นาที
       setInterval(updateLocation, 60000);
     };
   </script>
