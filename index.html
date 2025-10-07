@@ -20,23 +20,44 @@
       width: 100%;
     }
 
-    #locateBtn {
+    .control-panel {
       position: absolute;
       top: 10px;
       left: 10px;
       z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    button {
       background: #007bff;
       color: white;
       border: none;
       padding: 10px 15px;
       border-radius: 8px;
-      font-size: 16px;
+      font-size: 15px;
       cursor: pointer;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: background 0.3s;
     }
 
-    #locateBtn:hover {
+    button:hover {
       background: #0056b3;
+    }
+
+    #saveBtn {
+      background: #28a745;
+    }
+    #saveBtn:hover {
+      background: #1e7e34;
+    }
+
+    #clearBtn {
+      background: #dc3545;
+    }
+    #clearBtn:hover {
+      background: #a71d2a;
     }
 
     .leaflet-control-zoom {
@@ -57,7 +78,11 @@
 </head>
 
 <body>
-  <button id="locateBtn">📍 หาตำแหน่งปัจจุบัน</button>
+  <div class="control-panel">
+    <button id="locateBtn">📍 หาตำแหน่งปัจจุบัน</button>
+    <button id="saveBtn">💾 บันทึกเส้นทาง</button>
+    <button id="clearBtn">🧹 ล้างเส้นทาง</button>
+  </div>
   <div id="map"></div>
   <div id="status" class="update-status">🕓 กำลังรออัปเดตตำแหน่ง...</div>
 
@@ -66,7 +91,6 @@
 
   <script>
     window.onload = () => {
-      // สร้างแผนที่เริ่มต้น
       const map = L.map('map').setView([13.736717, 100.523186], 13);
 
       // เพิ่มแผนที่จาก OpenStreetMap
@@ -76,14 +100,13 @@
           '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
       }).addTo(map);
 
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 500);
+      setTimeout(() => map.invalidateSize(), 500);
 
       let marker, circle, polyline;
-      const path = []; // เก็บตำแหน่งทั้งหมดที่เคลื่อนที่ผ่าน
+      let path = []; // เก็บพิกัดทั้งหมด
       const statusEl = document.getElementById("status");
 
+      // ✅ ฟังก์ชันอัปเดตตำแหน่ง
       function updateLocation() {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
@@ -110,25 +133,18 @@
               // เพิ่มตำแหน่งใหม่ใน path
               path.push([lat, lng]);
 
-              // ถ้ามีเส้น polyline เดิม ให้ลบก่อน แล้ววาดใหม่
-              if (polyline) {
-                map.removeLayer(polyline);
-              }
-
+              // ลบเส้นเก่าแล้ววาดใหม่
+              if (polyline) map.removeLayer(polyline);
               polyline = L.polyline(path, {
                 color: "blue",
                 weight: 4,
                 opacity: 0.7
               }).addTo(map);
 
-              // จัดมุมมองให้เห็นตำแหน่งใหม่
               map.setView([lat, lng], 16);
 
-              // บันทึกตำแหน่งล่าสุด
-              localStorage.setItem("lastLat", lat);
-              localStorage.setItem("lastLng", lng);
-              localStorage.setItem("lastTime", new Date().toLocaleTimeString());
-
+              localStorage.setItem("path", JSON.stringify(path));
+              localStorage.setItem("lastUpdate", new Date().toLocaleTimeString());
               statusEl.innerHTML = `✅ อัปเดตตำแหน่งล่าสุดเมื่อ ${new Date().toLocaleTimeString()}`;
             },
             (err) => {
@@ -141,10 +157,44 @@
         }
       }
 
-      // เริ่มค้นหาตำแหน่งเมื่อคลิกปุ่ม
+      // 🟦 โหลดเส้นทางเก่าจาก localStorage (ถ้ามี)
+      const savedPath = localStorage.getItem("path");
+      if (savedPath) {
+        path = JSON.parse(savedPath);
+        polyline = L.polyline(path, { color: "blue", weight: 4 }).addTo(map);
+        map.fitBounds(polyline.getBounds());
+      }
+
+      // 📍 ปุ่มหาตำแหน่ง
       document.getElementById('locateBtn').addEventListener('click', updateLocation);
 
-      // ✅ อัปเดตตำแหน่งอัตโนมัติทุก 1 นาที
+      // 💾 ปุ่มบันทึกเส้นทางเป็นไฟล์ .json
+      document.getElementById('saveBtn').addEventListener('click', () => {
+        if (path.length === 0) {
+          alert("ยังไม่มีเส้นทางให้บันทึก!");
+          return;
+        }
+
+        const blob = new Blob([JSON.stringify(path, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `route_${new Date().toISOString().split("T")[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      // 🧹 ปุ่มล้างเส้นทาง
+      document.getElementById('clearBtn').addEventListener('click', () => {
+        if (confirm("แน่ใจหรือไม่ว่าต้องการล้างเส้นทางทั้งหมด?")) {
+          path = [];
+          if (polyline) map.removeLayer(polyline);
+          localStorage.removeItem("path");
+          statusEl.innerHTML = "🧹 ล้างเส้นทางแล้ว";
+        }
+      });
+
+      // 🔁 อัปเดตตำแหน่งอัตโนมัติทุก 1 นาที
       setInterval(updateLocation, 60000);
     };
   </script>
