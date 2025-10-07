@@ -39,7 +39,6 @@
       background: #0056b3;
     }
 
-    /* ปรับปุ่ม zoom control ลงล่าง 2cm */
     .leaflet-control-zoom {
       margin-top: 2cm !important;
     }
@@ -81,7 +80,8 @@
         map.invalidateSize();
       }, 500);
 
-      let marker, circle;
+      let marker, circle, polyline;
+      const path = []; // เก็บตำแหน่งทั้งหมดที่เคลื่อนที่ผ่าน
       const statusEl = document.getElementById("status");
 
       function updateLocation() {
@@ -92,19 +92,33 @@
               const lng = pos.coords.longitude;
               const accuracy = pos.coords.accuracy;
 
-              // ลบ marker เดิม
+              // ลบ marker/circle เดิม
               if (marker) {
                 map.removeLayer(marker);
                 map.removeLayer(circle);
               }
 
-              // สร้าง marker + วงกลมรัศมีใหม่
+              // เพิ่ม marker และวงกลมรัศมีใหม่
               marker = L.marker([lat, lng]).addTo(map);
               circle = L.circle([lat, lng], {
                 radius: accuracy,
                 color: "#136aec",
                 fillColor: "#136aec",
                 fillOpacity: 0.3
+              }).addTo(map);
+
+              // เพิ่มตำแหน่งใหม่ใน path
+              path.push([lat, lng]);
+
+              // ถ้ามีเส้น polyline เดิม ให้ลบก่อน แล้ววาดใหม่
+              if (polyline) {
+                map.removeLayer(polyline);
+              }
+
+              polyline = L.polyline(path, {
+                color: "blue",
+                weight: 4,
+                opacity: 0.7
               }).addTo(map);
 
               // จัดมุมมองให้เห็นตำแหน่งใหม่
@@ -115,7 +129,6 @@
               localStorage.setItem("lastLng", lng);
               localStorage.setItem("lastTime", new Date().toLocaleTimeString());
 
-              // แสดงเวลาอัปเดต
               statusEl.innerHTML = `✅ อัปเดตตำแหน่งล่าสุดเมื่อ ${new Date().toLocaleTimeString()}`;
             },
             (err) => {
