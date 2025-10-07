@@ -60,6 +60,14 @@
       background: #a71d2a;
     }
 
+    #importBtn {
+      background: #ffc107;
+      color: black;
+    }
+    #importBtn:hover {
+      background: #e0a800;
+    }
+
     .leaflet-control-zoom {
       margin-top: 2cm !important;
     }
@@ -81,8 +89,11 @@
   <div class="control-panel">
     <button id="locateBtn">📍 หาตำแหน่งปัจจุบัน</button>
     <button id="saveBtn">💾 บันทึกเส้นทาง</button>
+    <button id="importBtn">📂 นำเข้าเส้นทาง</button>
     <button id="clearBtn">🧹 ล้างเส้นทาง</button>
+    <input type="file" id="fileInput" accept=".json" style="display: none;">
   </div>
+
   <div id="map"></div>
   <div id="status" class="update-status">🕓 กำลังรออัปเดตตำแหน่ง...</div>
 
@@ -93,7 +104,6 @@
     window.onload = () => {
       const map = L.map('map').setView([13.736717, 100.523186], 13);
 
-      // เพิ่มแผนที่จาก OpenStreetMap
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution:
@@ -143,6 +153,7 @@
 
               map.setView([lat, lng], 16);
 
+              // เก็บ path ไว้ใน localStorage
               localStorage.setItem("path", JSON.stringify(path));
               localStorage.setItem("lastUpdate", new Date().toLocaleTimeString());
               statusEl.innerHTML = `✅ อัปเดตตำแหน่งล่าสุดเมื่อ ${new Date().toLocaleTimeString()}`;
@@ -157,7 +168,7 @@
         }
       }
 
-      // 🟦 โหลดเส้นทางเก่าจาก localStorage (ถ้ามี)
+      // โหลดเส้นทางเก่าจาก localStorage (ถ้ามี)
       const savedPath = localStorage.getItem("path");
       if (savedPath) {
         path = JSON.parse(savedPath);
@@ -168,7 +179,7 @@
       // 📍 ปุ่มหาตำแหน่ง
       document.getElementById('locateBtn').addEventListener('click', updateLocation);
 
-      // 💾 ปุ่มบันทึกเส้นทางเป็นไฟล์ .json
+      // 💾 ปุ่มบันทึกเส้นทาง
       document.getElementById('saveBtn').addEventListener('click', () => {
         if (path.length === 0) {
           alert("ยังไม่มีเส้นทางให้บันทึก!");
@@ -182,6 +193,37 @@
         a.download = `route_${new Date().toISOString().split("T")[0]}.json`;
         a.click();
         URL.revokeObjectURL(url);
+      });
+
+      // 📂 ปุ่มนำเข้าเส้นทาง
+      const fileInput = document.getElementById("fileInput");
+      document.getElementById('importBtn').addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const importedPath = JSON.parse(event.target.result);
+            if (!Array.isArray(importedPath)) throw new Error("ไฟล์ไม่ถูกต้อง");
+
+            // ล้างเส้นเดิม
+            if (polyline) map.removeLayer(polyline);
+
+            // แสดงเส้นใหม่จากไฟล์
+            path = importedPath;
+            polyline = L.polyline(path, { color: "green", weight: 4 }).addTo(map);
+            map.fitBounds(polyline.getBounds());
+
+            localStorage.setItem("path", JSON.stringify(path));
+            statusEl.innerHTML = "📂 โหลดเส้นทางจากไฟล์สำเร็จ";
+          } catch {
+            alert("ไฟล์เส้นทางไม่ถูกต้อง!");
+          }
+        };
+        reader.readAsText(file);
       });
 
       // 🧹 ปุ่มล้างเส้นทาง
